@@ -34,33 +34,39 @@ GATEWAY=http://api-xym-harvest-20.ap-northeast-1.nemtech.network
 systemctl restart sshd
 
 # ノード用ユーザ作成
-# Ubuntu向け {
+
+## Ubuntu ---------------------------------------------------- {
 adduser --disabled-password --gecos "" "$USER"
 echo "$USER:$PSWD" | chpasswd
-usermod -G wheel "$USER"
-# }
-# CentOS向け {
+## }
+
+## CentOS ----------------------------------------------------- {
 # useradd "$USER" -c ""
 # echo "$PSWD" | passwd --stdin "$USER"
-# usermod -G wheel "$USER"
-# }
+## }
+
 
 # パッケージを最新へアップデート
-# Ubuntu向け {
-apt-get update -y && apt-get upgrade -y
-# }
-# CentOS向け {
-# yum upgrade -y
-# }
 
-# dockerのインストールとサービス開始
-# Ubuntu向け {
+## Ubuntu ---------------------------------------------------- {
+apt-get update -y && apt-get upgrade -y
+## }
+
+## CentOS ----------------------------------------------------- {
+# yum upgrade -y
+## }
+
+
+# dockerのインストール
+
+## Ubuntu ---------------------------------------------------- {
 apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get update -y && apt-get install -y docker-ce
-# }
-# CentOS向け {
+## }
+
+## CentOS ----------------------------------------------------- {
 # yum remove -y docker \
 #               docker-client \
 #               docker-client-latest \
@@ -77,12 +83,34 @@ apt-get update -y && apt-get install -y docker-ce
 # yum install -y \
 #   http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.68-1.el7.noarch.rpm \
 #   docker-ce docker-ce-cli containerd.io
-# }
+## }
+
+# -------------------------------------------------------------
 
 # docker設定
 usermod -a -G docker "$USER"
-## コンテナのログ肥大化回避のため古いログは100MBごと3つまででローテーション
-echo '{"userns-remap":"default","log-driver":"json-file","log-opts":{"max-size":"100m","max-file":"3"}}' > /etc/docker/daemon.json
+## コンテナのログ肥大化回避のため古いログは20MBごと5つまででローテーション
+# echo '{"userns-remap":"default","log-driver":"json-file","log-opts":{"max-size":"20m","max-file":"5"}}' > /etc/docker/daemon.json
+echo '{"userns-remap":"default","log-driver":"syslog","log-opts":{"tag":"docker/{{.ImageName}}/{{.Name}}/{{.ID}}"}}' > /etc/docker/daemon.json
+## journaldに標準出力が流れているのでrsyslogから拾う
+cat << __EOD__ > /etc/rsyslog.d/60-docker.conf
+$template DockerLogs, "/var/log/docker/%syslogtag:R,ERE,1,FIELD:docker/(.+)/--end%.log"
+if $syslogfacility-text == 'daemon' and $programname contains 'docker' then -?DockerLogs
+& stop
+__EOD__
+## ログローテーション設定
+cat << __EOD__ > /etc//etc/logrotate.d/docker
+/var/log/docker/*/*.log {
+  daily
+  rotate 7
+  delaycompress
+  compress
+  notifempty
+  missingok
+  copytruncate
+  dateext
+}
+__EOD__
 systemctl restart docker
 sed -Ei.bak "/dockremap:/,/:/ s/[0-9]+/$(id -u symbol)/" /etc/subuid
 sed -Ei.bak "/dockremap:/,/:/ s/[0-9]+/$(id -g symbol)/" /etc/subgid
@@ -116,11 +144,11 @@ cd symbol-testnet-bootstrap-$BOOTSTRAP_TAG/peer-assembly
 
 # 設定ファイルの書き換えと更新
 #   設定ファイル生成だけ先に済ませる
-docker-compose -f docker-compose.yaml up --build generate-raw-addresses store-addresses update_vars
+sudo -u $USER docker-compose -f docker-compose.yaml up --build generate-raw-addresses store-addresses update_vars
 if [ -n "$FRIENDLY_NAME" ]; then
   sed -i.bak "/friendly_name/ s/[0-9A-Z]\{8\}/$FRIENDLY_NAME/" peer-node/config-input.yaml
   # 設定ファイルの適用
-  docker-compose -f docker-compose.yaml up --build update_vars
+  sudo -u $USER docker-compose -f docker-compose.yaml up --build update_vars
 fi
 if [ -n "$NODE_HOST" ]; then
   mv peer-node/userconfig/resources/config-node.properties.template{,.bak}
@@ -169,15 +197,40 @@ cd `dirname $0`
 while true; do
   echo "ibase=16;$(cat data/index.dat | xxd -p | fold -w2 | tac | tr -d '\n' | tr '[:lower:]' '[:upper:]')" \
     | bc \
-    > tmp/height.txt
-  cat tmp/height.txt
+    > htdocs/height.txt
+  cat htdocs/height.txt
   sleep 20
 done
 __EOD__
 chmod +x health-check.sh && chown "$USER": health-check.sh
 
+# lighttpd用コンフィグ
+cat << \__EOD__ > lighttpd.conf
+var.basedir  = "/var/www/localhost"
+var.logdir   = "/var/log/lighttpd"
+var.statedir = "/var/lib/lighttpd"
+server.modules = (
+    "mod_access",
+    "mod_accesslog"
+)
+include "mime-types.conf"
+server.username      = "lighttpd"
+server.groupname     = "lighttpd"
+server.document-root = var.basedir + "/htdocs"
+server.pid-file      = "/run/lighttpd.pid"
+server.errorlog      = "/dev/pts/0"
+server.indexfiles    = ("index.html", "index.htm")
+server.follow-symlink = "enable"
+static-file.exclude-extensions = (".pl", ".cgi", ".fcgi")
+accesslog.filename   = "/dev/pts/0"
+dir-listing.activate = "enable"
+url.access-deny = ("~", ".inc")
+server.network-backend = "writev"
+__EOD__
+chmod +x lighttpd.conf && chown "$USER": lighttpd.conf
+
 # symbolノードのブロック高情報を公開するためのサービス
-cat << __EOD__ > /etc/systemd/system/sym-height.service
+cat << __EOD__ > /etc/systemd/system/sym-util.service
 [Unit]
 Description=Catapult Node simple health check
 After=symbol.service
@@ -188,11 +241,11 @@ User=$USER
 
 WorkingDirectory=/home/$USER/symbol-testnet-bootstrap-$BOOTSTRAP_TAG/peer-assembly
 
-ExecStartPre=/usr/bin/docker run --rm --name sym-height -t -v /home/$USER/symbol-testnet-bootstrap-$BOOTSTRAP_TAG/peer-assembly/tmp:/var/www/localhost/htdocs:ro -p $HTTPD_PORT:80 -d sebp/lighttpd
+ExecStartPre=/usr/bin/docker run --rm --name sym-util -t -v /home/$USER/symbol-testnet-bootstrap-$BOOTSTRAP_TAG/peer-assembly/htdocs:/var/www/localhost/htdocs:ro -v /home/$USER/symbol-testnet-bootstrap-$BOOTSTRAP_TAG/peer-assembly/lighttpd.conf:/etc/lighttpd/lighttpd.conf -p $HTTPD_PORT:80 -d sebp/lighttpd
 
 ExecStart=/home/$USER/symbol-testnet-bootstrap-$BOOTSTRAP_TAG/peer-assembly/health-check.sh
 
-ExecStopPost=/usr/bin/docker stop sym-height
+ExecStopPost=/usr/bin/docker stop sym-util
 
 Restart=always
 RestartSec=120s
@@ -204,17 +257,19 @@ __EOD__
 # ブートストラップの常時起動設定とサービスの開始
 systemctl daemon-reload
 systemctl enable symbol && systemctl start symbol
-systemctl enable sym-height && systemctl start sym-height
+systemctl enable sym-util && systemctl start sym-util
 
-# Ubuntu向け {
+# -------------------------------------------------------------
+
+## Ubuntu ---------------------------------------------------- {
 apt-get clean -y && apt-get autoremove -y
 dpkg -l 'linux-image-*' | sed '/^ii/!d;/'"$(uname -r | sed "s/\(.*\)-\([^0-9]\+\)/\1/")"'/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d' | xargs sudo apt-get -y purge
 update-grub
-# }
+## }
 
-# CentOS向け {
+## CentOS --------------------------------------------------- {
 # # パッケージマネージャキャッシュ削除
 # yum clean all
 # # 古いカーネルを削除
 # package-cleanup --oldkernels --count=1 -y
-# }
+## }
