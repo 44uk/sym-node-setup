@@ -2,6 +2,8 @@
 
 Automatically setting up Symbol Testnet node script.
 
+For Ubuntu 16.04.
+
 
 ## Usage
 
