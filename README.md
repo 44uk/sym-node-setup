@@ -1,5 +1,7 @@
 # sym-node-setup
 
+Automatically setting up Symbol Testnet node script.
+
 
 ## Usage
 
@@ -21,17 +23,6 @@ $ curl -s https://raw.githubusercontent.com/44uk/sym-node-setup/master/roles/sym
 *MAKE SURE YOU UNDERSTAND WHAT HAPPENS BEFORE EXECUTE IT.*
 
 
-## Ports
-
-Allow outbound transport.
-
-- 7900 peer
-- 7902 broker (on setup API)
-- 3000 rest-gateway (on setup API)
-- 50022 sshd
-- 50080 httpd
-
-
 ## Debug info
 
 http://_your_node_:50080
@@ -45,6 +36,17 @@ http://_your_node_:50080
 You can pass a set of USER and PSWD.
 
 
+## Ports
+
+Allow outbound transport.
+
+- 7900 peer
+- 7902 broker (on setup API)
+- 3000 rest-gateway (on setup API)
+- 50022 sshd
+- 50080 httpd
+
+
 ## Configuration
 
 ```shell
@@ -56,6 +58,6 @@ HTTPD_PORT=50080
 DOCKER_COMPOSE_VER=1.25.4
 BOOTSTRAP_TAG=0.9.2.1-beta4
 ASSEMBLY=peer # peer, api, api-harvest
-FRIENDLY_NAME=
+FRIENDLY_NAME= # set name as you like
 NODE_HOST=
 ```
