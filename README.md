@@ -1,8 +1,8 @@
 # sym-node-setup
 
-Automatically setting up Symbol Testnet node script.
+Automatically setting up Symbol Testnet node script for Ubuntu 16.04.
 
-For Ubuntu 16.04.
+- [nemfoundation/symbol\-testnet\-bootstrap](https://github.com/nemfoundation/symbol-testnet-bootstrap)
 
 
 ## Usage
@@ -11,7 +11,7 @@ Paste script into startup script on your Cloud Service.
 
 or
 
-execute it on your server machine.
+execute following command on your server machine.
 
 ```shell
 # setup peer node
