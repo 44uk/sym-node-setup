@@ -110,7 +110,7 @@ if $syslogfacility-text == 'daemon' and $programname contains 'docker' then -?Do
 & stop
 __EOD__
 ## ログローテーション設定
-cat << __EOD__ > /etc//etc/logrotate.d/docker
+cat << __EOD__ > /etc/logrotate.d/docker
 /var/log/docker/*/*.log {
   daily
   rotate 7
@@ -206,7 +206,7 @@ cd \`dirname \$0\`
 mkdir -p htdocs/chain
 while true; do
   echo "ibase=16;\$(cat $DAT_PATH | xxd -p | fold -w2 | tac | tr -d '\n' | tr '[:lower:]' '[:upper:]')" \
-    | bc | echo "{\"height\":\$(cat -)}" \
+    | bc | echo "{\"height\":\"\$(cat -)\"}" \
     > htdocs/chain/height.json
   cat htdocs/chain/height.json
   sleep 20

@@ -3,7 +3,7 @@
 # AWS EC2 の ステップ3: インスタンスの詳細の設定 高度な詳細 > ユーザーデータ に貼り付けることで、
 # インスタンス起動時にsymbol-testnet-bootstrapのpeerノードのセットアップを行います。
 # また、動作の確認用に最新ブロック高を外部へ公開するサービスも動作させます。
-# http://__ip_addr__:50080/height.txt でブロック高を確認できます。
+# http://__ip_addr__:50080/chain/height.jsonでブロック高を確認できます。
 #
 # 次の作業を行います。
 # * ノード動作用ユーザの作成
@@ -110,7 +110,7 @@ if $syslogfacility-text == 'daemon' and $programname contains 'docker' then -?Do
 & stop
 __EOD__
 ## ログローテーション設定
-cat << __EOD__ > /etc//etc/logrotate.d/docker
+cat << __EOD__ > /etc/logrotate.d/docker
 /var/log/docker/*/*.log {
   daily
   rotate 7
@@ -206,7 +206,7 @@ cd \`dirname \$0\`
 mkdir -p htdocs/chain
 while true; do
   echo "ibase=16;\$(cat $DAT_PATH | xxd -p | fold -w2 | tac | tr -d '\n' | tr '[:lower:]' '[:upper:]')" \
-    | bc | echo "{\"height\":\$(cat -)}" \
+    | bc | echo "{\"height\":\"\$(cat -)\"}" \
     > htdocs/chain/height.json
   cat htdocs/chain/height.json
   sleep 20
