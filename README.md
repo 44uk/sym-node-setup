@@ -1,4 +1,4 @@
-# sym-node-setup
+# symbol-node-setup
 
 Automatically setting up Symbol Testnet node script for Ubuntu 16.04.
 
@@ -15,11 +15,11 @@ execute following command on your server machine.
 
 ```shell
 # setup peer node
-$ curl -s https://raw.githubusercontent.com/44uk/sym-node-setup/master/roles/sym-peer-setup.sh | bash
+$ curl -s https://raw.githubusercontent.com/44uk/symbol-node-setup/master/roles/sym-peer-setup.sh | bash
 # setup api node
-$ curl -s https://raw.githubusercontent.com/44uk/sym-node-setup/master/roles/sym-api-setup.sh | bash
+$ curl -s https://raw.githubusercontent.com/44uk/symbol-node-setup/master/roles/sym-api-setup.sh | bash
 # setup api-harvest node
-$ curl -s https://raw.githubusercontent.com/44uk/sym-node-setup/master/roles/sym-api-harvest-setup.sh | bash
+$ curl -s https://raw.githubusercontent.com/44uk/symbol-node-setup/master/roles/sym-api-harvest-setup.sh | bash
 ```
 
 *MAKE SURE YOU UNDERSTAND WHAT HAPPENS BEFORE EXECUTE IT.*
@@ -43,6 +43,7 @@ You can pass a set of USER and PSWD.
 Allow outbound transport.
 
 - 7900 peer
+- 7901 peer-rest
 - 7902 broker (on setup API)
 - 3000 rest-gateway (on setup API)
 - 50022 sshd
