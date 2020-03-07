@@ -17,6 +17,7 @@
 #
 # セキュリティグループでは次のポートを公開してください。
 # *  7900 peerノード間の通信用
+# *  7901
 # *  7902 ブローカーノード間の通信用(API起動時)
 # *  3000 ゲートウェイの通信用(API起動時)
 # * 50022 sshd (変数で任意に変更可)
@@ -27,7 +28,7 @@ PSWD=symbol # 変更を推奨
 SSHD_PORT=50022
 HTTPD_PORT=50080
 DOCKER_COMPOSE_VER=1.25.4
-BOOTSTRAP_TAG=0.9.2.1-beta4
+BOOTSTRAP_TAG=0.9.3.1-beta1
 ASSEMBLY=api # peer, api, api-harvest
 FRIENDLY_NAME=
 NODE_HOST=
